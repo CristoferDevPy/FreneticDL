@@ -1,6 +1,6 @@
 # FreneticDL
 ==========================================
-Potente CLI(interfaz de línea de comandos) atractiva  para descargar archivos utilizando segmentacion y multithreading.
+Potente CLI(interfaz de línea de comandos) atractiva  para descargar archivos utilizando segmentacion y concurrencia.
 ==========================================
 
 ![./FreneticDL ](./finaaaaa.png)
@@ -8,7 +8,7 @@ Potente CLI(interfaz de línea de comandos) atractiva  para descargar archivos u
 
 **Caracteristicas:**
 * utiliza la infalible tecnica de segmentacion dinamica para redes con baja latencia.
-* segmentacion paralela(threads).
+* segmentacion concurrente.
 * capacidad para pausar/continuar Ctrl+C
 * validacion de segmentos inicio y final.
 * multiples reconexiones por perdidad de red.
