@@ -4,7 +4,7 @@ Potente CLI(interfaz de línea de comandos) atractiva  para descargar archivos u
 ==========================================
 
 caracteristicas:
-**utiliza la infalible tecnica de segmentacion dinamica para redes con baja latencia.
+**utiliza la infalible tecnica de segmentacion dinamica para redes con baja latencia.**
 **segmentacion paralela(threads).
 **capacidad para pausar/continuar Ctrl+C
 **validacion de segmentos inicio y final.
