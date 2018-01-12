@@ -3,7 +3,7 @@
 Potente CLI(interfaz de línea de comandos) atractiva  para descargar archivos utilizando segmentacion y multithreading.
 ==========================================
 
-**caracteristicas:**
+**Caracteristicas:**
 * utiliza la infalible tecnica de segmentacion dinamica para redes con baja latencia.
 * segmentacion paralela(threads).
 * capacidad para pausar/continuar Ctrl+C
@@ -12,3 +12,8 @@ Potente CLI(interfaz de línea de comandos) atractiva  para descargar archivos u
 * personalizar cabezeras HTTP , cookies, user-agent.
 * CLI agradable con la informacion que necesitas.
 **
+
+**Instalacion:**
+============
+* From Source
+``python setup.py install``
