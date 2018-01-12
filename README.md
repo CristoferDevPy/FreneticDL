@@ -3,7 +3,7 @@
 Potente CLI(interfaz de línea de comandos) atractiva  para descargar archivos utilizando segmentacion y multithreading.
 ==========================================
 
-![GitHub Logo](FreneticDL/finaaaaa.png)
+![./FreneticDL ](./finaaaaa.png)
 
 
 **Caracteristicas:**
