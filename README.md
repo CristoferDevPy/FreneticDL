@@ -15,9 +15,10 @@ Potente CLI(interfaz de línea de comandos) atractiva  para descargar archivos u
 
 **Instalacion:**
 ============
-* From Source
-``python setup.py install``
+* ``python setup.py install``
 
 **Uso:**
 ============
 * ``./freneticDL.py -u http://127.0.0.1/debian.iso``
+* ``./freneticDL.py -u http://127.0.0.1/debian.iso -o kde.iso -c distro``
+* ``./freneticDL.py -u http://127.0.0.1/debian.iso -t 5``
