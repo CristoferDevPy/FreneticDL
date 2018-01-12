@@ -18,6 +18,9 @@ Potente CLI(interfaz de línea de comandos) atractiva  para descargar archivos u
 
 **Instalacion:**
 ============
+* ``recomendable usar virtualenv``
+* ``git clone https://github.com/CristoferDevPy/FreneticDL.git``
+* ``cd FreneticDL/``
 * ``python setup.py install``
 
 **Uso:**
