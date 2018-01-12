@@ -3,7 +3,8 @@
 Potente CLI(interfaz de línea de comandos) atractiva  para descargar archivos utilizando segmentacion y multithreading.
 ==========================================
 
-.. image:: ./finaaaaa.png
+![GitHub Logo](FreneticDL/finaaaaa.png)
+
 
 **Caracteristicas:**
 * utiliza la infalible tecnica de segmentacion dinamica para redes con baja latencia.
