@@ -3,7 +3,7 @@
 Potente CLI(interfaz de línea de comandos) atractiva  para descargar archivos utilizando segmentacion y concurrencia.
 ==========================================
 
-![./FreneticDL ](./finaaaaa.png)
+![./FreneticDL ](./img.png)
 
 
 **Caracteristicas:**
