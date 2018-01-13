@@ -60,7 +60,7 @@ class FreneticDL(object):
 		
 	def config(self):
 		requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-		logging.basicConfig(level=logging.DEBUG, format=' %(levelname)s : %(message)s',)
+		logging.basicConfig(level=logging.INFO, format=' %(levelname)s : %(message)s',)
 		signal.signal(signal.SIGINT, self.change_estate)
 
 	def change_estate(self,signum, frame):
