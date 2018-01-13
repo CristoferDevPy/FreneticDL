@@ -47,7 +47,6 @@ class FreneticDL(object):
 		self.Lista_Pool = []
 		self.cookie = ''
 		self.startPorcen = 10
-		self.Active = False
 		self.new_len = 0
 		self.pwd = ''
 		self.Intentos_Segmentos = {}
@@ -61,7 +60,7 @@ class FreneticDL(object):
 		
 	def config(self):
 		requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-		logging.basicConfig(level=logging.INFO, format=' %(levelname)s : %(message)s',)
+		logging.basicConfig(level=logging.DEBUG, format=' %(levelname)s : %(message)s',)
 		signal.signal(signal.SIGINT, self.change_estate)
 
 	def change_estate(self,signum, frame):
@@ -91,9 +90,6 @@ class FreneticDL(object):
 					sleep(0.1)
 
 			if path.exists(self.pwd):
-				self.finish = True
-				self.StateFile = self.verde('completo')
-				self.porcentaje = '100'
 				for i in range(self.segmentos):
 					remove(path.join(self.Temp,filename+str(i+1)))
 		except Exception as e:
@@ -218,7 +214,6 @@ class FreneticDL(object):
 		self.Temp = temp
 		self.cookie = cookie
 		self.UserAgent = UserAgent
-		self.contador = 0
 		self.filename = filename
 		self.enlace = url
 		self.reconect = reconect
@@ -286,14 +281,20 @@ class FreneticDL(object):
 
 		wait(self.Lista_Pool)
 		if self.contador == self.segmentos:
+			self.finish = True
+			self.StateFile = self.verde('completo')
+			self.porcentaje = '100'
+
 			unir = ThreadPoolExecutor(1)
 			self.Lista_Pool2.append(unir.submit(self.Concat,self.filename,folder))
 			wait(self.Lista_Pool2)
+			self.scan = False
+			sleep(1)
+			logging.info(self.akua('%s Descargado con Exito!'%(self.filename)))
+			logging.info(self.akua('salida:  %s'%(self.pwd)))
 
 		elif self.NotRangeSupport:
-			self.UrlFaill =   True
-		elif self.abort:
-			self.scan = False
+			self.UrlFaill = True
 		else:
 			self.UrlFaill = True
 			self.scan = False
@@ -361,12 +362,7 @@ class FreneticDL(object):
 
 				system('clear')
 				print(sector1, sector2)
-				if self.finish:
-					logging.info(self.akua('%s Descargado con Exito!'%(self.filename)))
-					logging.info(self.akua('salida:  %s'%(self.pwd)))
 				
-				 	return
-
 			except Exception as e:
 				logging.debug(unicode(e))
 				self.restante = self.freezeRestante
@@ -405,4 +401,4 @@ if __name__ == '__main__':
 			args.output = args.url.split('/')[-1]
 		FreneticDL().download_file(args.url, args.output, args.folder, args.cookie, args.agent, args.tmp,args.reconect, args.threads)
 	else:
-		print(color('FreneticDL V.%s \n -u   ingrese una URL  \n -h   informacion y posibles parametros'%(__version__)))
+		print(color('FreneticDL V.%s \n -u   Ingrese una URL.  \n -h   Informacion y posibles parametros'%(__version__)))
