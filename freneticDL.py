@@ -291,7 +291,7 @@ class FreneticDL(object):
 			wait(self.Lista_Pool2)
 
 		elif self.NotRangeSupport:
-			self.UrlFaill = True
+			self.UrlFaill =   True
 		elif self.abort:
 			self.scan = False
 		else:
