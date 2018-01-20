@@ -16,7 +16,7 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 __autor__ = 'Henry Cristofer Vasquez Conde'
 __correo__ = 'cristofer_dev.py@hotmail.com'
-__version__ = '1.0'
+__version__ = '1.0.1'
 
 
 class FreneticDL(object):
@@ -50,7 +50,7 @@ class FreneticDL(object):
 		self.new_len = 0
 		self.pwd = ''
 		self.Intentos_Segmentos = {}
-		self.Temp = r'/var/tmp'
+		self.Temp = r'/tmp/'
 		self.NotRangeSupport = False
 		self.setColor = lambda c,d: '%s%s %s %s'%(fg(0), bg(c),d, attr('reset'))
 		self.verde = lambda d: self.setColor(85,d)
@@ -59,9 +59,10 @@ class FreneticDL(object):
 		self.config()
 		
 	def config(self):
+		signal.signal(signal.SIGINT, self.change_estate)
 		requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 		logging.basicConfig(level=logging.INFO, format=' %(levelname)s : %(message)s',)
-		signal.signal(signal.SIGINT, self.change_estate)
+		
 
 	def change_estate(self,signum, frame):
 		if not self.pause:
@@ -96,16 +97,16 @@ class FreneticDL(object):
 			logging.debug(unicode(e))
 
 
-	# reproducir videos en stream, mientras se descarga.
+	# reproducir videos en stream, mientras se descarga. /7solo funciona en gnu/linux, problemas en windows
 	def ConcatPlay(self,filename,ruta):
 		try:
 			with open(path.join(ruta,filename),"wb") as file:
 				for i in range(self.segmentos):
 					while True:
-						while not path.exists(path.join(self.Temp,filename+str(i+1))):
+						while not path.exists(path.join(ruta,filename+str(i+1))):
 							sleep(0.3)
 						try:
-							with open(path.join(self.Temp,filename+str(i+1)), "rb") as p:
+							with open(path.join(ruta,filename+str(i+1)), "rb") as p:
 								parte  = p.read()
 								if self.part+1 == len(parte):
 									file.seek(self.part*i)
@@ -115,8 +116,8 @@ class FreneticDL(object):
 								if self.abort_stream:
 									return
 								sleep(0.3)
-						except:
-							pass
+						except Exception as e:
+							logging.debug(unicode(e))
 		except Exception as e:
 			logging.debug(unicode(e))
 		finally:
@@ -124,8 +125,7 @@ class FreneticDL(object):
 
 
 	def Handler(self,start, end, url, file_temp):
-		intentos = self.Intentos_Segmentos[file_temp]
-		self.Intentos_Segmentos[file_temp] = intentos + 1
+		self.Intentos_Segmentos[file_temp] += 1
 
 		try:
 			t = 0
@@ -149,7 +149,7 @@ class FreneticDL(object):
 			logging.debug('download part {0}'.format(file_temp))
 			cont_seg = 0
 			headers = {'Range': 'bytes=%d-%d' %(Newstart, end),'User-Agent':self.UserAgent,'cookie':self.cookie}
-			r = get(url, headers=headers,stream=True,verify=False,timeout=30,allow_redirects=True)
+			r = get(url, headers=headers,stream=True,verify=False,timeout=20,allow_redirects=True)
 
 			### VALIDANDO DATA ###
 			peso = r.headers['content-range']
@@ -162,7 +162,7 @@ class FreneticDL(object):
 				f.seek(Newstart)
 				f.tell()
 				for chunk in r.iter_content(chunk_size=1024):
-					if self.abort:
+					if self.abort or self.NotRangeSupport:
 						return
 					while self.pause:
 						if self.abort:
@@ -198,15 +198,19 @@ class FreneticDL(object):
 		except Exception as e:
 			logging.debug(self.Intentos_Segmentos[file_temp])
 			logging.debug(unicode(e))
-			if u'content-range' in unicode(e) or u'peso_no_coincide' in unicode(e):
-				if self.Intentos_Segmentos[file_temp] == 30:
+			if u'content-range' in unicode(e):
+				if self.Intentos_Segmentos[file_temp] == 5:
 					self.NotRangeSupport = True
 					return
-			if self.Intentos_Segmentos[file_temp] == self.reconect:
+			elif u'peso_no_coincide' in unicode(e):
+				if self.Intentos_Segmentos[file_temp] == 5:
+					self.UrlFaill = True
+					return
+			elif self.Intentos_Segmentos[file_temp] == self.reconect:
 				self.UrlFaill = True
 				return
 			sleep(10)
-			self.Handler(start, end, url, file_temp)
+			return self.Handler(start, end, url, file_temp)
 
 
 
@@ -219,10 +223,20 @@ class FreneticDL(object):
 		self.reconect = reconect
 		self.hilos = threads
 		logging.info(url)
+
+		header =		{
+				'User-Agent':self.UserAgent,
+				'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+				'Accept-Language':"en-US,en;q=0.5",
+				'Accept-Encoding':"gzip, deflate",
+				'Range': 'bytes=0-10000',
+				'cookie':self.cookie
+						}
+
 		try:
 			self.UrlFaill = False
 			self.NetError = False
-			r = get(url,verify=False,headers={'User-Agent':UserAgent,'Range': 'bytes=0-1000','cookie':self.cookie},timeout=30,allow_redirects=True)
+			r = get(url,verify=False,headers=header,timeout=20,allow_redirects=True)
 			file_size = r.headers['content-range']
 			file_size = int(file_size.split('/')[-1])
 			self.pesoTotalKB = file_size
@@ -235,7 +249,7 @@ class FreneticDL(object):
 			if 'html' in TipoContenido:
 				self.UrlFaill = True
 				return
-			elif self.file_size_Megas > 300:	# stream de archivos grandes
+			elif self.file_size_Megas > 300:	# play stream de archivos grandes
 				self.startPorcen = 2
 
 		except Exception as e:
@@ -261,13 +275,18 @@ class FreneticDL(object):
 			for i in range(self.segmentos):
 				while executor._work_queue.qsize() >= self.hilos:
 					sleep(0.3)
-				if self.abort:
+
+				if self.NotRangeSupport:
+					self.scan = False
+					break
+				elif self.abort:
 					self.scan = False
 					for i in range(self.segmentos):
 						try:
 							remove(path.join(self.Temp,self.filename+str(i+1)))
 						except:
 							pass
+					break	
 				start = self.part * i
 				end = start + self.part
 				self.new_len = 0
@@ -294,7 +313,7 @@ class FreneticDL(object):
 			logging.info(self.akua('salida:  %s'%(self.pwd)))
 
 		elif self.NotRangeSupport:
-			self.UrlFaill = True
+			self.scan = False
 		else:
 			self.UrlFaill = True
 			self.scan = False
@@ -381,6 +400,7 @@ class FreneticDL(object):
 
 
 if __name__ == '__main__':
+	
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-u", "--url", help="Enlace de descarga", type=str, required=False)
 	parser.add_argument("-o", "--output", help="nombre del archivo salida", type=str, default='',  required=False)	
