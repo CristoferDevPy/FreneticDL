@@ -6,6 +6,8 @@ from concurrent.futures import ThreadPoolExecutor,wait
 from requests import get
 from os import getenv,getcwd,path,remove,mkdir,system
 from time import sleep
+from subprocess import Popen
+from sys import platform
 from colored import fg, bg, attr
 import logging
 import requests
@@ -16,7 +18,7 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 __autor__ = 'Henry Cristofer Vasquez Conde'
 __correo__ = 'cristofer_dev.py@hotmail.com'
-__version__ = '1.0.1'
+__version__ = '1.1.0'
 
 
 class FreneticDL(object):
@@ -46,7 +48,7 @@ class FreneticDL(object):
 		self.NetError = False
 		self.Lista_Pool = []
 		self.cookie = ''
-		self.startPorcen = 10
+		self.startPorcen = 5
 		self.new_len = 0
 		self.pwd = ''
 		self.Intentos_Segmentos = {}
@@ -97,7 +99,7 @@ class FreneticDL(object):
 			logging.debug(unicode(e))
 
 
-	# reproducir videos en stream, mientras se descarga. /7solo funciona en gnu/linux, problemas en windows
+	# reproducir videos mientras se descarga. /7solo funciona en gnu/linux, problemas en windows
 	def ConcatPlay(self,filename,ruta):
 		try:
 			with open(path.join(ruta,filename),"wb") as file:
@@ -122,6 +124,22 @@ class FreneticDL(object):
 			logging.debug(unicode(e))
 		finally:
 			remove(path.join(ruta,filename))
+
+
+	def PlayVideo(self,binary):
+		if platform == 'linux2':
+			#totem,vlc,dragon
+			cmd = '{0} "{1}"'.format(binary,path.join(getcwd(),self.Temp,self.filename))
+		elif platform == 'win32':
+			# wmplayer = path.join(getenv('PROGRAMFILES') ,'Windows Media Player' ,'wmplayer.exe')
+			vlc = path.join(getenv('PROGRAMFILES') ,'VideoLAN', 'VLC','vlc.exe')
+			cmd = '"{0}" "{1}"'.format(vlc, path.join(getcwd(),self.Temp,self.filename))
+
+		sleep(3)
+		proc = Popen(cmd, shell=True)
+		proc.wait()
+		self.abort_stream = True
+
 
 
 	def Handler(self,start, end, url, file_temp):
@@ -214,7 +232,7 @@ class FreneticDL(object):
 
 
 
-	def download_file(self, url, filename, folder, cookie, UserAgent, temp, reconect,threads):
+	def download_file(self, url, filename, folder, cookie, UserAgent, temp, reconect,threads, play):
 		self.Temp = temp
 		self.cookie = cookie
 		self.UserAgent = UserAgent
@@ -222,6 +240,8 @@ class FreneticDL(object):
 		self.enlace = url
 		self.reconect = reconect
 		self.hilos = threads
+		self.play = play
+
 		logging.info(url)
 
 		header =		{
@@ -271,34 +291,36 @@ class FreneticDL(object):
 		exe.submit(self.EstadoDownload)
 
 		self.Lista_Pool2 = []
-		with ThreadPoolExecutor(max_workers=self.hilos) as executor:
-			for i in range(self.segmentos):
-				while executor._work_queue.qsize() >= self.hilos:
-					sleep(0.3)
 
-				if self.NotRangeSupport:
-					self.scan = False
-					break
-				elif self.abort:
-					self.scan = False
-					for i in range(self.segmentos):
-						try:
-							remove(path.join(self.Temp,self.filename+str(i+1)))
-						except:
-							pass
-					break	
-				start = self.part * i
-				end = start + self.part
-				self.new_len = 0
-				if i == (self.segmentos-1):
-					self.new_len = file_size-start
-					end  = file_size
+		executor = ThreadPoolExecutor(max_workers=self.hilos)
+		for i in range(self.segmentos):
+			while executor._work_queue.qsize() >= self.hilos:
+				sleep(0.3)
 
-				self.Intentos_Segmentos[self.filename+str(i+1)] = 0
-				pool = executor.submit(self.Handler,start, end, url, self.filename+str(i+1))
-				self.Lista_Pool.append(pool)
+			if self.NotRangeSupport:
+				self.scan = False
+				break
+			elif self.abort:
+				self.scan = False
+				for i in range(self.segmentos):
+					try:
+						remove(path.join(self.Temp,self.filename+str(i+1)))
+					except:
+						pass
+				break	
+			start = self.part * i
+			end = start + self.part
+			self.new_len = 0
+			if i == (self.segmentos-1):
+				self.new_len = file_size-start
+				end  = file_size
+
+			self.Intentos_Segmentos[self.filename+str(i+1)] = 0
+			pool = executor.submit(self.Handler,start, end, url, self.filename+str(i+1))
+			self.Lista_Pool.append(pool)
 
 		wait(self.Lista_Pool)
+
 		if self.contador == self.segmentos:
 			self.finish = True
 			self.StateFile = self.verde('completo')
@@ -330,8 +352,16 @@ class FreneticDL(object):
 					self.megas_float = format(megas,'.2f')
 					self.MegaEstado = '{0}/{1} MB'.format(self.megas_float,self.file_size_Megas)
 					self.porcentaje = (float(self.kiloByteDescargados)/float(self.pesoTotalKB))*100.0
-					self.barra = self.porcentaje
+					self.barra  = self.porcentaje
 					self.porcentaje = format(self.porcentaje,'.2f')
+
+					if self.play and self.barra >= self.startPorcen:
+						unir = ThreadPoolExecutor(1)
+						unir.submit(self.ConcatPlay,self.filename,self.Temp)
+						play = ThreadPoolExecutor(1)
+						play.submit(self.PlayVideo,self.play.lower())
+						self.play = False
+
 				else:
 					self.porcentaje = '100' #evitar 99.9
 					self.barra = 100
@@ -345,7 +375,7 @@ class FreneticDL(object):
 				self.ListIntervalo.append(newBytes)
 				self.rate = sum(self.ListIntervalo)
 
-				INF = '%s/%sM \t  Porcentaje: %s'%(self.megas_float,self.file_size_Megas,self.porcentaje)
+				INF = '%s/%sM \t  Porcentaje: %s %%'%(self.megas_float,self.file_size_Megas,self.porcentaje)
 				self.barra = '[%s%s]'%('#' * int(self.barra), ' '*(100-int(self.barra)))
 				self.barra = self.verde(self.barra)
 				
@@ -403,14 +433,16 @@ if __name__ == '__main__':
 	
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-u", "--url", help="Enlace de descarga", type=str, required=False)
-	parser.add_argument("-o", "--output", help="nombre del archivo salida", type=str, default='',  required=False)	
-	parser.add_argument("-f", "--folder", help="carpeta de salida", type=str, default='./',  required=False)	
+	parser.add_argument("-o", "--output", help="Nombre del archivo salida", type=str, default='',  required=False)	
+	parser.add_argument("-f", "--folder", help="Carpeta de salida", type=str, default='./',  required=False)	
 	parser.add_argument("-t", "--threads", help="Nº de conexiones paralelas", type=int, default=3, required=False)
 	parser.add_argument("-a", "--agent", help="User-Agent del dispositivo", type=str, default='',required=False)
-	parser.add_argument("-c", "--cookie", help="datos de sesion", type=str, default='', required=False)
-	parser.add_argument("-tm", "--tmp", help="carpeta temporal", type=str, default=r'/var/tmp/', required=False)
+	parser.add_argument("-c", "--cookie", help="Datos de sesion", type=str, default='', required=False)
+	parser.add_argument("-tm", "--tmp", help="Carpeta temporal", type=str, default=r'/tmp/', required=False)
 	parser.add_argument("-r", "--reconect", help="Nº de reintentos por conexion", type=int, default=100, required=False)
-	parser.add_argument("-v", "--version", help="version del modulo", action="store_true")
+	parser.add_argument("-v", "--version", help="Version del modulo", action="store_true")
+	parser.add_argument("-p", "--play", help="Reproducir video cuando supere el 5 %%, indicar reproductor eje: -p vlc", type=str)
+	
 	args = parser.parse_args()
 	color = lambda d: '%s%s %s %s'%(fg(0), bg(85),d, attr('reset'))
 
@@ -419,6 +451,6 @@ if __name__ == '__main__':
 	elif args.url:
 		if not args.output:
 			args.output = args.url.split('/')[-1]
-		FreneticDL().download_file(args.url, args.output, args.folder, args.cookie, args.agent, args.tmp,args.reconect, args.threads)
+		FreneticDL().download_file(args.url, args.output, args.folder, args.cookie, args.agent, args.tmp,args.reconect, args.threads,args.play)
 	else:
 		print(color('FreneticDL V.%s \n -u   Ingrese una URL.  \n -h   Informacion y posibles parametros'%(__version__)))

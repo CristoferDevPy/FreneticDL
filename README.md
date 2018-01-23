@@ -8,6 +8,7 @@ Potente CLI(interfaz de línea de comandos) atractiva  para descargar archivos u
 
 **Caracteristicas:**
 * utiliza la infalible tecnica de segmentacion dinamica para redes con baja latencia.
+* (NEW)capacidad de reproducir videos mientras descarga.
 * segmentacion concurrente.
 * capacidad para pausar/continuar Ctrl+C
 * validacion de segmentos inicio y final.
@@ -26,5 +27,6 @@ Potente CLI(interfaz de línea de comandos) atractiva  para descargar archivos u
 **Uso:**
 ============
 * ``./freneticDL.py -u http://127.0.0.1/debian.iso``
+* ``./freneticDL.py -u http://127.0.0.1/video.mp4 -p vlc``
 * ``./freneticDL.py -u http://127.0.0.1/debian.iso -o kde.iso -c distro``
 * ``./freneticDL.py -u http://127.0.0.1/debian.iso -t 5``
