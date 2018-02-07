@@ -2,9 +2,9 @@
 #coding:utf-8
 
 from __future__ import print_function
-from concurrent.futures import ThreadPoolExecutor,wait
+from concurrent.futures import ThreadPoolExecutor, wait
 from requests import get
-from os import getenv,getcwd,path,remove,mkdir,system
+from os import getenv, getcwd, path, remove, mkdir, system
 from time import sleep
 from subprocess import Popen
 from sys import platform
@@ -14,7 +14,7 @@ import requests
 import signal
 import argparse
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
-
+import os
 
 __autor__ = 'Henry Cristofer Vasquez Conde'
 __correo__ = 'cristofer_dev.py@hotmail.com'
@@ -29,7 +29,7 @@ class FreneticDL(object):
 		self.segmentos = 50
 		self.hilos = 3
 		self.reconect = 100
-		self.kiloByteDescargados = 0
+		self.BytesDescargados = 0
 		self.file_size_Megas = 0
 		self.MegaEstado = ''
 		self.porcentaje = 0
@@ -68,11 +68,12 @@ class FreneticDL(object):
 
 	def change_estate(self,signum, frame):
 		if not self.pause:
-			self.StateFile = self.rojo('pause')
 			self.pause = True
+			self.StateFile = self.rojo('pause')
 		else:
-			self.StateFile = self.verde('run')
 			self.pause = False
+			self.StateFile = self.verde('run')
+			
 			
 
 	def Concat(self,filename,ruta):
@@ -157,7 +158,7 @@ class FreneticDL(object):
 
 					if t == self.part+1:	#Completo#
 						logging.debug('utilizando segmento..')
-						self.kiloByteDescargados += t
+						self.BytesDescargados += t
 						self.contador += 1
 						return
 					else:	#parcial#
@@ -187,7 +188,7 @@ class FreneticDL(object):
 							return
 						sleep(1)
 					if chunk:
-						self.kiloByteDescargados += len(chunk)
+						self.BytesDescargados += len(chunk)
 						cont_seg += len(chunk)
 						f.write(chunk)
 
@@ -259,7 +260,7 @@ class FreneticDL(object):
 			r = get(url,verify=False,headers=header,timeout=20,allow_redirects=True)
 			file_size = r.headers['content-range']
 			file_size = int(file_size.split('/')[-1])
-			self.pesoTotalKB = file_size
+			self.pesoTotal = file_size
 			self.file_size_Megas = file_size/(1024*1024)
 			TipoContenido = r.content
 			logging.info('Tamaño: %s M'%(self.file_size_Megas))
@@ -320,7 +321,6 @@ class FreneticDL(object):
 			self.Lista_Pool.append(pool)
 
 		wait(self.Lista_Pool)
-
 		if self.contador == self.segmentos:
 			self.finish = True
 			self.StateFile = self.verde('completo')
@@ -341,6 +341,34 @@ class FreneticDL(object):
 			self.scan = False
 
 
+	def time_read(self,duration, fmt_short=False):
+	    duration = int(duration)
+	    if duration == 0:
+	        return "0s" if fmt_short else "0 segundos"
+
+	    INTERVALS = [1, 60, 3600, 86400]
+	    if fmt_short:
+	        NAMES = ['s'*2, 'm'*2, 'h'*2, 'd'*2]
+	    else:
+	        NAMES = [('segundo', 'segundos'),
+	             ('minuto', 'minutos'),
+	             ('hora', 'horas'),
+	             ('dia', 'dias')]
+
+	    result = []
+
+	    for i in range(len(NAMES)-1, -1, -1):
+	        a = duration // INTERVALS[i]
+	        if a > 0:
+	            result.append( (a, NAMES[i][1 % a]) )
+	            duration -= a * INTERVALS[i]
+
+	    if fmt_short:
+	        return "".join(["%s%s " % x for x in result])
+	    return ", ".join(["%s %s" % x for x in result])
+
+
+
 	def EstadoDownload(self):
 		self.freezeRate = ''
 		self.freezeRestante = ''
@@ -348,10 +376,10 @@ class FreneticDL(object):
 		while self.scan:
 			try:
 				if not self.finish:
-					megas = float(self.kiloByteDescargados)/(1024.0*1024.0)
+					megas = float(self.BytesDescargados)/(1024.0*1024.0)
 					self.megas_float = format(megas,'.2f')
 					self.MegaEstado = '{0}/{1} MB'.format(self.megas_float,self.file_size_Megas)
-					self.porcentaje = (float(self.kiloByteDescargados)/float(self.pesoTotalKB))*100.0
+					self.porcentaje = (float(self.BytesDescargados)/float(self.pesoTotal))*100.0
 					self.barra  = self.porcentaje
 					self.porcentaje = format(self.porcentaje,'.2f')
 
@@ -370,8 +398,8 @@ class FreneticDL(object):
 				if len(self.ListIntervalo) == 10:
 					self.ListIntervalo.pop(0)
 
-				newBytes = (float(self.kiloByteDescargados) - self.Intervalo)/1024.0
-				self.Intervalo = self.kiloByteDescargados
+				newBytes = (float(self.BytesDescargados) - self.Intervalo)/1024.0
+				self.Intervalo = self.BytesDescargados
 				self.ListIntervalo.append(newBytes)
 				self.rate = sum(self.ListIntervalo)
 
@@ -380,7 +408,7 @@ class FreneticDL(object):
 				self.barra = self.verde(self.barra)
 				
 				if self.rate > 0:
-					self.restante = int((self.pesoTotalKB-self.kiloByteDescargados)/1024/self.rate)
+					self.restante = int((self.pesoTotal-self.BytesDescargados)/1024/self.rate)
 					if self.rate < 1024:
 						self.rate = format(self.rate,'.2f')+' kiB/s'
 						self.freezeRate = self.rate
@@ -390,13 +418,8 @@ class FreneticDL(object):
 						self.freezeRate = self.rate
 
 					if self.restante > 0:
-						if len(str(self.restante))>2:
-							self.restante = self.restante/60
-							self.restante = str(self.restante) + ' m'
-							self.freezeRestante = self.restante
-						else:
-							self.restante = str(self.restante) + ' s'
-							self.freezeRestante = self.restante
+						self.restante = self.time_read(self.restante,1)
+						self.freezeRestante = self.restante
 					else:
 						self.restante = self.freezeRestante
 				else:
@@ -406,7 +429,7 @@ class FreneticDL(object):
 				
 				sector1 = ' Enlace: {0} \n Archivo: {1} \n Tamaño: {2}M \n Conexiones(Threads): {3} \n Estado: {4} \t *Presiona Ctrl+C para pausar o continuar. \n {5} \n '.format(
 					self.enlace,self.filename,self.file_size_Megas,self.hilos,self.StateFile, self.barra)
-				sector2 = '{0} \t Restante: {1}     \t Tasa: {2}'.format(INF,self.restante,self.rate)
+				sector2 = '{0} \t Restante: {1}     \t Tasa: {2}'.format(INF, self.restante,self.rate)
 				sector2 = self.akua(sector2)
 
 				system('clear')
